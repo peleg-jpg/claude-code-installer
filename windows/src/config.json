@@ -1,0 +1,44 @@
+{
+  "dependencies": {
+    "nodejs": {
+      "minimumVersion": "20.0.0"
+    },
+    "git": {
+      "minimumVersion": "2.0.0"
+    }
+  },
+  "urls": {
+    "nvmWindows": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe",
+    "vscodeWindows": "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
+  },
+  "vscode": {
+    "extensions": [
+      "anthropic.claude-code"
+    ],
+    "settings": {
+      "files.autoSave": "afterDelay",
+      "files.autoSaveDelay": 1000,
+      "editor.fontSize": 14,
+      "editor.tabSize": 2,
+      "editor.wordWrap": "on",
+      "editor.minimap.enabled": false,
+      "editor.formatOnSave": true,
+      "terminal.integrated.fontSize": 14,
+      "workbench.startupEditor": "none",
+      "explorer.confirmDelete": false,
+      "explorer.confirmDragAndDrop": false,
+      "git.autofetch": true,
+      "git.confirmSync": false,
+      "git.enableSmartCommit": true
+    }
+  },
+  "git": {
+    "config": {
+      "init.defaultBranch": "main",
+      "core.editor": "code --wait",
+      "pull.rebase": "false",
+      "core.autocrlf": "true",
+      "credential.helper": "manager"
+    }
+  }
+}
