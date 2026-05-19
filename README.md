@@ -1,14 +1,14 @@
-# Claude Code One-Click Installer
+# מתקין Claude Code בלחיצה אחת
 
-One-command installer that sets up a complete Claude Code development environment on macOS and Windows. Run one line in a terminal, get everything you need installed, no clicks, no prompts.
+מתקין אחד שמכין לך את כל סביבת הפיתוח של Claude Code, גם על Mac וגם על Windows. מדביקים שורה אחת בטרמינל, מקבלים סביבה מוכנה לעבודה. בלי לחיצות, בלי שאלות, בלי להתעסק.
 
-Designed for non-technical users, students, and anyone who just wants to start using Claude Code without manually wiring up Git, Node, VS Code, and npm.
+מתאים למי שלא רוצה להתעסק עם Git, Node, ו-VS Code ידנית, וגם לסטודנטים שזה היום הראשון שלהם עם Claude Code.
 
-## Quick Start
+## התקנה מהירה
 
 ### macOS
 
-Open Terminal and paste:
+פותחים Terminal ומדביקים:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh | bash
@@ -16,46 +16,46 @@ curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/mai
 
 ### Windows
 
-Open **PowerShell as Administrator** and paste:
+פותחים **PowerShell as Administrator** (קליק ימני -> Run as administrator) ומדביקים:
 
 ```powershell
 irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.bat" -OutFile install.bat; .\install.bat
 ```
 
-## What Gets Installed
+## מה מותקן
 
-| Tool                                    | Purpose                                            |
-| --------------------------------------- | -------------------------------------------------- |
-| **Xcode Command Line Tools** (mac only) | Required by Homebrew, git, compilers               |
-| **Homebrew** (mac only)                 | macOS package manager                              |
-| **Git**                                 | Version control                                    |
-| **VS Code**                             | Code editor, pre-configured with sensible defaults |
-| **Claude Code VS Code Extension**       | Anthropic's official IDE integration               |
-| **nvm** / **nvm-windows**               | Node version manager                               |
-| **Node.js (LTS)** + latest **npm**      | JavaScript runtime                                 |
-| **Claude Code**                         | Installed globally via npm                         |
-| **Bun**                                 | Fast JS runtime, useful for Claude Code workflows  |
-| **GitHub CLI** (`gh`)                   | GitHub from the terminal                           |
+| כלי                                     | בשביל מה                                               |
+| --------------------------------------- | ------------------------------------------------------ |
+| **Xcode Command Line Tools** (Mac בלבד) | תלות של Homebrew, git ושל הקומפיילרים                  |
+| **Homebrew** (Mac בלבד)                 | מנהל החבילות של macOS                                  |
+| **Git**                                 | ניהול גרסאות                                           |
+| **VS Code**                             | עורך הקוד, עם הגדרות שפויות מראש                       |
+| **Claude Code VS Code Extension**       | התוסף הרשמי של Anthropic לאינטגרציה ב-VS Code          |
+| **nvm** / **nvm-windows**               | מנהל גרסאות Node                                       |
+| **Node.js (LTS)** + **npm** עדכני       | סביבת JavaScript                                       |
+| **Claude Code**                         | מותקן גלובלית דרך npm                                  |
+| **Bun**                                 | runtime מהיר ל-JS, שימושי בזרימות עבודה עם Claude Code |
+| **GitHub CLI** (`gh`)                   | עבודה מול GitHub מהטרמינל                              |
 
-The installer also writes opinionated VS Code settings (auto-save, format-on-save, no minimap, larger terminal font) and Git defaults (default branch `main`, VS Code as editor, sane rebase + credential helpers per OS).
+המתקין גם כותב הגדרות VS Code עם דעה (auto-save, format-on-save, minimap כבוי, גופן טרמינל גדול יותר) והגדרות Git חכמות (הברנץ הדיפולטיבי הוא `main`, VS Code כעורך הדיפולטיבי, ועוד פרטים שמשתנים בין Mac ל-Windows).
 
-## Design Goals
+## עקרונות
 
-- **Zero prompts** — fully automatic
-- **Idempotent** — safe to run multiple times, skips what is already installed
-- **Smart detection** — version checks before reinstalling
-- **Visible progress** — colored step counters and `[OK]` / `[SKIP]` / `[FAIL]` markers
-- **Debug mode** — pass `--debug` (mac) or `-debug` (windows) for verbose output
+- **בלי שאלות** - הכל אוטומטי
+- **בטוח להריץ שוב** - מזהה מה כבר מותקן ומדלג
+- **בדיקות גרסה חכמות** - לא יתקין מחדש אם הגרסה שלך עדכנית
+- **מתקדם לאט-לאט עם סימני התקדמות** - מספרים, צבעים, וסימוני `[OK]` / `[SKIP]` / `[FAIL]`
+- **מצב דיבאג** - מעבירים `--debug` (Mac) או `-debug` (Windows) ומקבלים פלט מפורט
 
-## After Installation
+## אחרי ההתקנה
 
-1. Open a **new terminal window** so PATH updates take effect.
-2. Run `code` to open VS Code.
-3. Open VS Code's integrated terminal (`` Ctrl+` `` on Windows, `` Cmd+` `` on Mac).
-4. Run `claude` to start Claude Code.
-5. Authenticate on first run.
+1. פותחים **חלון טרמינל חדש** כדי שעדכוני ה-PATH ייכנסו לתוקף
+2. מקלידים `code` כדי לפתוח VS Code
+3. פותחים את הטרמינל המובנה של VS Code (ב-Windows ``Ctrl+` ``, ב-Mac ``Cmd+` ``)
+4. מקלידים `claude` כדי להפעיל את Claude Code
+5. בריצה הראשונה תתבקש להתחבר
 
-## Verify
+## בדיקה
 
 ```bash
 code --version
@@ -67,16 +67,16 @@ gh --version
 claude --version
 ```
 
-## Troubleshooting
+## בעיות נפוצות
 
-- **macOS:** if a dialog appears asking you to install Command Line Tools, click `Install` and wait. Homebrew may ask for your login password.
-- **Apple Silicon (M1/M2/M3) and Intel** are both supported.
-- **Windows:** if `winget` is unavailable, the installer falls back to direct downloads. Run from elevated PowerShell.
-- **Debug mode:**
-  - mac: `curl -fsSL ...install.sh | bash -s -- --debug`
-  - win: `install.bat -debug`
+- **macOS:** אם קופץ דיאלוג שמבקש להתקין Command Line Tools, לוחצים `Install` ומחכים. Homebrew יבקש סיסמת מערכת (סיסמת ההתחברות למק).
+- **Apple Silicon (M1/M2/M3) וגם Intel** נתמכים שניהם.
+- **Windows:** אם `winget` לא קיים, המתקין נופל אוטומטית להורדה ישירה. חובה להריץ מ-PowerShell מורם (Administrator).
+- **מצב דיבאג:**
+  - Mac: `curl -fsSL ...install.sh | bash -s -- --debug`
+  - Win: `install.bat -debug`
 
-## Uninstall
+## הסרה
 
 ### macOS
 
@@ -90,27 +90,27 @@ curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/mai
 irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/uninstall.bat" -OutFile uninstall.bat; .\uninstall.bat
 ```
 
-> The macOS uninstaller intentionally keeps Xcode Command Line Tools installed (other system tools depend on them).
+> ב-Mac, ה-Uninstaller לא מסיר את Xcode Command Line Tools בכוונה, כי כלים אחרים במערכת תלויים בהם.
 
-## Platform Details
+## פירוט לפי מערכת
 
-- [macOS README](mac/README.md)
-- [Windows README](windows/README.md)
+- [README של macOS](mac/README.md)
+- [README של Windows](windows/README.md)
 
-## How It Works
+## איך זה עובד
 
-Each platform has the same structure:
+לכל מערכת מבנה זהה:
 
 ```
 mac/
-  install.sh           # thin launcher (detects local vs. piped-curl mode)
-  uninstall.sh         # full uninstaller
+  install.sh           # משגר דק (מזהה לבד אם אתה מקלוןן ריפו או מריץ דרך curl)
+  uninstall.sh         # מסיר את הכל
   src/
-    installer.sh       # actual installation logic
-    config.json        # versions, extensions, settings
+    installer.sh       # הלוגיקה עצמה
+    config.json        # גרסאות, תוספים, הגדרות
 
 windows/
-  install.bat          # thin launcher
+  install.bat          # משגר דק
   uninstall.bat
   src/
     installer.ps1
@@ -118,8 +118,12 @@ windows/
     config.json
 ```
 
-The launcher checks whether `src/installer.*` exists next to it. If yes, it runs locally. If no (the user piped `curl ... | bash`), it downloads `installer.*` and `config.json` to a temp dir and runs them there. This means one command works whether you cloned the repo or pasted a one-liner.
+המשגר בודק אם `src/installer.*` נמצא לידו על הדיסק. אם כן, מריץ מקומית. אם לא (כי המשתמש הריץ `curl ... | bash`), הוא מוריד את `installer.*` ואת `config.json` לתיקייה זמנית ומריץ משם. ככה אותה שורת פקודה עובדת גם אם קלונת את הריפו וגם אם פשוט הדבקת את ה-One Liner.
 
-## License
+## בדיקות אוטומטיות
 
-MIT - see [LICENSE](LICENSE).
+הריפו מריץ GitHub Actions בכל push: מתקין על runner נקי של macos-latest ושל windows-latest, מאמת שכל הכלים נמצאים ב-PATH ועונים על `--version`, ואז מריץ את המתקין שוב כדי לוודא שאפשר להריץ פעמיים בלי בעיות.
+
+## רישיון
+
+MIT - ראה [LICENSE](LICENSE).

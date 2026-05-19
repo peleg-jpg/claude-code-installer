@@ -1,82 +1,87 @@
-# Claude Code One-Click Installer — Windows
+# מתקין Claude Code בלחיצה אחת - Windows
 
-Automated installer that sets up VS Code, Git, Node.js, and Claude Code on Windows with zero manual steps.
+מתקין אוטומטי שמרים לך VS Code, Git, Node.js ו-Claude Code על Windows בלי לחיצה אחת ידנית.
 
-## Quick Start
+## התקנה מהירה
 
-**One-line install** (open PowerShell as Administrator):
+**התקנה בשורה אחת** (פותחים PowerShell as Administrator):
+
 ```powershell
 irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.bat" -OutFile install.bat; .\install.bat
 ```
 
-**Or clone and run:**
+**או, אם אתה מעדיף לקלון את הריפו:**
+
 ```
 git clone https://github.com/peleg-jpg/claude-code-installer.git
-cd claude-code-one-click-install\windows
+cd claude-code-installer\windows
 install.bat
 ```
 
-## What It Does
+## מה הוא עושה
 
-1. **VS Code** — Installs via winget (fallback: direct download), adds to PATH
-2. **Git** — Installs via winget (fallback: direct download), adds to PATH
-3. **Git Config** — Sets default branch to `main`, editor to VS Code, credential helper
-4. **Node.js** — Installs nvm-windows, then Node.js LTS via nvm
-5. **npm** — Updates to latest version
-6. **Claude Code** — Installs globally via npm
-7. **VS Code Extensions** — Installs Claude Code extension
-8. **VS Code Settings** — Configures auto-save, font size, formatting, etc.
+1. **VS Code** - מתקין דרך winget (fallback: הורדה ישירה), מוסיף ל-PATH
+2. **Git** - מתקין דרך winget (fallback: הורדה ישירה), מוסיף ל-PATH
+3. **הגדרות Git** - ברנץ דיפולטיבי `main`, VS Code כעורך, credential helper של Windows
+4. **Node.js** - מתקין nvm-windows ואחר כך Node.js LTS דרך nvm
+5. **npm** - מעדכן לגרסה האחרונה
+6. **Claude Code** - מתקין גלובלית דרך npm
+7. **Bun** - מתקין runtime מהיר נוסף ל-JS
+8. **GitHub CLI** - מתקין את `gh`
+9. **תוסף Claude Code ל-VS Code** - מתקין אוטומטית
+10. **הגדרות VS Code** - auto-save, גודל פונט, format-on-save, וכו'
 
-## Requirements
+## דרישות
 
-- Windows 10 or Windows 11
-- Internet connection
-- Admin privileges (script will request elevation automatically)
+- Windows 10 או Windows 11
+- חיבור לאינטרנט
+- הרשאות מנהל (הסקריפט יבקש הרשאה אוטומטית אם צריך)
 
-## Debug Mode
+## מצב דיבאג
 
-Run with debug output for troubleshooting:
+מקבלים פלט מפורט לפתרון בעיות:
+
 ```
 install.bat -debug
 ```
 
-## Configuration
+## הגדרות
 
-Edit `src/config.json` to customize:
-- VS Code settings and extensions
-- Git global configuration
-- Minimum version requirements
-- Download URLs
+עורכים את `src/config.json` כדי לשנות:
 
-## How It Works
+- הגדרות VS Code ואת רשימת התוספים
+- ההגדרות הגלובליות של Git
+- דרישות גרסה מינימליות
+- כתובות הורדה
 
-- `install.bat` is the entry point that detects local vs remote mode
-- If run from a cloned repo, it uses local files
-- If downloaded standalone, it fetches `src/installer.ps1` and `src/config.json` from GitHub
-- `src/installer.ps1` does all the actual installation work
-- Each step checks if the tool is already installed and skips if so
-- No interactive prompts — everything is automatic
+## איך זה עובד
 
-## Uninstall
+- `install.bat` הוא נקודת הכניסה. הוא מזהה לבד אם הוא רץ מתוך קלון מקומי או מתוך התקנה מרוחקת
+- אם רץ מתוך ריפו מקלוןן, הוא משתמש בקבצים המקומיים
+- אם הורד כקובץ עצמאי, הוא מביא את `src/installer.ps1` ואת `src/config.json` מ-GitHub
+- `src/installer.ps1` עושה את כל העבודה האמיתית
+- כל שלב בודק אם הכלי כבר מותקן ומדלג אם כן
+- אפס שאלות, הכל אוטומטי
 
-To remove everything that was installed (open PowerShell as Administrator):
+## הסרה
+
+להסרת כל מה שהותקן (פותחים PowerShell as Administrator):
+
 ```powershell
 irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/uninstall.bat" -OutFile uninstall.bat; .\uninstall.bat
 ```
 
-This will uninstall VS Code, Git, Node.js (nvm-windows), Claude Code, and clean up all settings/config files. You'll be asked to confirm before proceeding.
+יוסר VS Code, Git, Node.js (nvm-windows), Bun, GitHub CLI ו-Claude Code, וגם כל ההגדרות שלהם. תתבקש לאשר לפני שזה רץ.
 
-## File Structure
+## מבנה תיקיות
 
 ```
 windows/
-├── install.bat            # Entry point launcher
-├── uninstall.bat          # Uninstaller launcher
+├── install.bat            # נקודת כניסה (משגר)
+├── uninstall.bat          # משגר הסרה
 ├── src/
-│   ├── installer.ps1      # Main PowerShell installer
-│   ├── uninstaller.ps1    # Main PowerShell uninstaller
-│   └── config.json        # Configuration
-├── README.md              # This file
-├── CLAUDE.md              # Development documentation
-└── LICENSE                # MIT License
+│   ├── installer.ps1      # המתקין הראשי ב-PowerShell
+│   ├── uninstaller.ps1    # מסיר ראשי ב-PowerShell
+│   └── config.json        # הגדרות
+└── README.md              # הקובץ הזה
 ```
