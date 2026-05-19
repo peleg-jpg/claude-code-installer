@@ -57,7 +57,7 @@ function Request-AdminPrivileges {
         Write-Host "Failed to elevate privileges: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Please run PowerShell as Administrator manually and execute the script." -ForegroundColor Yellow
         Write-Host "Press any key to exit..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
     }
     exit
 }
@@ -758,13 +758,15 @@ try {
     catch {
         Write-Host "Configuration Error: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Press any key to exit..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
         exit 1
     }
 
-    # Setup
-    $Host.UI.RawUI.WindowTitle = "Claude Code Installer"
-    Clear-Host
+    # Setup (skip interactive console ops when running in CI)
+    if (-not $env:CI) {
+        $Host.UI.RawUI.WindowTitle = "Claude Code Installer"
+        Clear-Host
+    }
 
     Write-ColoredOutput "========================================" "Magenta"
     Write-ColoredOutput "   Claude Code One-Click Installer      " "Magenta"
@@ -844,7 +846,7 @@ try {
     Write-ColoredOutput "Note: You may need to restart your terminal for all PATH changes to take effect." "Yellow"
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
 }
 catch {
     Write-DebugOutput "Installation failed with error: $($_.Exception.Message)"
@@ -867,5 +869,6 @@ catch {
     Write-ColoredOutput "Please check your internet connection and try again." "Yellow"
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
+    exit 1
 }

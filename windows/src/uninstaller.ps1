@@ -74,7 +74,7 @@ function Request-AdminPrivileges {
         Write-Host "Failed to elevate privileges: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "Please run PowerShell as Administrator manually." -ForegroundColor Yellow
         Write-Host "Press any key to exit..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
     }
     exit
 }
@@ -417,8 +417,10 @@ try {
         return
     }
 
-    $Host.UI.RawUI.WindowTitle = "Claude Code Uninstaller"
-    Clear-Host
+    if (-not $env:CI) {
+        $Host.UI.RawUI.WindowTitle = "Claude Code Uninstaller"
+        Clear-Host
+    }
 
     Write-ColoredOutput "========================================" "Red"
     Write-ColoredOutput "   Claude Code One-Click Uninstaller    " "Red"
@@ -433,7 +435,7 @@ try {
     if ($response -notin @("y", "Y", "yes", "YES")) {
         Write-ColoredOutput "Uninstall cancelled." "Yellow"
         Write-Host "Press any key to exit..." -ForegroundColor Gray
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
         exit 0
     }
 
@@ -459,7 +461,7 @@ try {
     Write-ColoredOutput "You may need to restart your computer for all changes to take effect." "Yellow"
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
 }
 catch {
     Write-Host ""
@@ -475,5 +477,5 @@ catch {
 
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }
 }

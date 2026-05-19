@@ -1,0 +1,106 @@
+name: Test installers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  macos:
+    name: macOS installer
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run installer
+        run: bash mac/install.sh --debug
+
+      - name: Verify tools are installed
+        run: |
+          set -e
+          # Source nvm so node/npm are visible
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          # Ensure bun is on PATH
+          export PATH="$HOME/.bun/bin:$PATH"
+
+          missing=()
+          for t in code git node npm bun gh claude; do
+            if command -v "$t" >/dev/null 2>&1; then
+              ver=$("$t" --version 2>/dev/null | head -1)
+              echo "OK:      $t  ($ver)"
+            else
+              echo "MISSING: $t"
+              missing+=("$t")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing tools: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Re-run installer (idempotency check)
+        run: bash mac/install.sh
+
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run installer
+        shell: pwsh
+        run: |
+          .\windows\src\installer.ps1 -Debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify tools are installed
+        shell: pwsh
+        run: |
+          # Refresh PATH from registry (installer updates Machine/User PATH but pwsh session is stale)
+          $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+          $userPath    = [System.Environment]::GetEnvironmentVariable("Path", "User")
+          $env:Path = "$machinePath;$userPath"
+
+          # Add common install locations the installer may have created
+          foreach ($extra in @(
+              "$env:USERPROFILE\.bun\bin",
+              "$env:ProgramFiles\nodejs",
+              "$env:ProgramFiles\Git\bin",
+              "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin"
+          )) {
+              if ((Test-Path $extra) -and ($env:Path -notlike "*$extra*")) {
+                  $env:Path += ";$extra"
+              }
+          }
+
+          $missing = @()
+          foreach ($t in @("code","git","node","npm","bun","gh","claude")) {
+              $cmd = Get-Command $t -ErrorAction SilentlyContinue
+              if ($cmd) {
+                  $ver = (& $t --version 2>$null | Select-Object -First 1)
+                  Write-Host "OK:      $t  ($ver)" -ForegroundColor Green
+              } else {
+                  Write-Host "MISSING: $t" -ForegroundColor Red
+                  $missing += $t
+              }
+          }
+          if ($missing.Count -gt 0) {
+              Write-Host "::error::Missing tools: $($missing -join ', ')"
+              exit 1
+          }
+
+      - name: Re-run installer (idempotency check)
+        shell: pwsh
+        run: |
+          .\windows\src\installer.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
