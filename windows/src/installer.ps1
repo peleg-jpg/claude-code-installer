@@ -679,8 +679,56 @@ function Install-VSCodeExtensions {
     }
 }
 
+function Install-ClaudeRTL {
+    Write-StepHeader 10 "Installing Claude RTL (Hebrew support)..."
+
+    # Find the code CLI command
+    $codeCmd = Get-Command code -ErrorAction SilentlyContinue
+    $codePath = if ($codeCmd) {
+        $codeCmd.Source
+    }
+    else {
+        Find-VSCodeCmd
+    }
+
+    if (-not $codePath) {
+        Write-StepError "VS Code 'code' command not found - cannot install Claude RTL"
+        Write-ColoredOutput "  Install manually: download the VSIX from github.com/peleg-jpg/claude-rtl/releases" "Yellow"
+        return
+    }
+
+    try {
+        $installed = & $codePath --list-extensions 2>&1
+        if ($installed -match "^peleg\.claude-rtl$") {
+            Write-Success "Claude RTL already installed"
+            return
+        }
+
+        # Stable redirect URL - no GitHub API call, so no unauthenticated rate limits
+        $vsixUrl = "https://github.com/peleg-jpg/claude-rtl/releases/latest/download/claude-rtl.vsix"
+        $vsixPath = "$env:TEMP\claude-rtl.vsix"
+        Write-DebugOutput "Downloading Claude RTL from: $vsixUrl"
+        Invoke-WebRequest -Uri $vsixUrl -OutFile $vsixPath -UseBasicParsing
+
+        $output = & $codePath --install-extension $vsixPath --force 2>&1
+        $exitCode = $LASTEXITCODE
+        Write-DebugOutput "Claude RTL install output: $output"
+        Remove-Item $vsixPath -Force -ErrorAction SilentlyContinue
+
+        if ($exitCode -eq 0) {
+            Write-Success "Claude RTL installed (Hebrew RTL in the Claude Code chat)"
+        }
+        else {
+            Write-StepError "Claude RTL install returned exit code $exitCode"
+        }
+    }
+    catch {
+        Write-StepError "Failed to install Claude RTL: $($_.Exception.Message)"
+    }
+}
+
 function Set-VSCodeSettings {
-    Write-StepHeader 10 "Configuring VS Code settings..."
+    Write-StepHeader 11 "Configuring VS Code settings..."
 
     # Find the correct user's AppData (may differ when running elevated)
     $settingsDir = "$env:APPDATA\Code\User"
@@ -785,7 +833,8 @@ try {
     Install-Bun              # Step 7
     Install-GitHubCLI        # Step 8
     Install-VSCodeExtensions # Step 9
-    Set-VSCodeSettings       # Step 10
+    Install-ClaudeRTL        # Step 10
+    Set-VSCodeSettings       # Step 11
 
     # ============================================================
     # Verification Summary

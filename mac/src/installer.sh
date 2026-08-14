@@ -451,6 +451,33 @@ install_vscode_extensions() {
     done < <(config_get "vscode.extensions")
 }
 
+install_rtl_extension() {
+    print_step "Installing Claude RTL (Hebrew support)..."
+
+    if ! command_exists code; then
+        print_skip "VS Code 'code' command not found, skipping Claude RTL"
+        return
+    fi
+
+    if code --list-extensions 2>/dev/null | grep -qi '^peleg\.claude-rtl$'; then
+        print_skip "Claude RTL already installed"
+        return
+    fi
+
+    # Stable redirect URL - no GitHub API call, so no unauthenticated rate limits
+    local vsix_url="https://github.com/peleg-jpg/claude-rtl/releases/latest/download/claude-rtl.vsix"
+
+    print_debug "Downloading Claude RTL from: $vsix_url"
+    local vsix_tmp
+    vsix_tmp="$(mktemp -d)/claude-rtl.vsix"
+    if curl -fsSL -o "$vsix_tmp" "$vsix_url" && code --install-extension "$vsix_tmp" --force &>/dev/null; then
+        print_success "Claude RTL installed (Hebrew RTL in the Claude Code chat)"
+    else
+        print_error "Failed to install Claude RTL"
+    fi
+    rm -f "$vsix_tmp"
+}
+
 configure_vscode_settings() {
     print_step "Configuring VS Code settings..."
 
@@ -532,7 +559,8 @@ main() {
     install_bun                # Step 10
     install_github_cli         # Step 11
     install_vscode_extensions  # Step 12
-    configure_vscode_settings  # Step 13
+    install_rtl_extension      # Step 13
+    configure_vscode_settings  # Step 14
 
     # ============================================================
     # Verification Summary

@@ -36,6 +36,7 @@ irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/wind
 | **Claude Code**                         | מותקן גלובלית דרך npm                                  |
 | **Bun**                                 | runtime מהיר ל-JS, שימושי בזרימות עבודה עם Claude Code |
 | **GitHub CLI** (`gh`)                   | עבודה מול GitHub מהטרמינל                              |
+| **Claude RTL**                          | עברית מיושרת לימין בצ'אט של Claude Code, בלי שום הגדרה |
 
 המתקין גם כותב הגדרות VS Code עם דעה (auto-save, format-on-save, minimap כבוי, גופן טרמינל גדול יותר) והגדרות Git חכמות (הברנץ הדיפולטיבי הוא `main`, VS Code כעורך הדיפולטיבי, ועוד פרטים שמשתנים בין Mac ל-Windows).
 
