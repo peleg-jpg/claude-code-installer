@@ -359,14 +359,19 @@ install_claude_code() {
         exit 1
     fi
 
-    npm install -g @anthropic-ai/claude-code
+    # npm 12+ blocks postinstall scripts by default. Claude Code's postinstall
+    # downloads its native binary, so it must be allowed or the CLI comes out broken.
+    # Older npm treats the unknown flag as a config warning and ignores it.
+    npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code
 
-    if command_exists claude; then
+    if command_exists claude && claude --version &>/dev/null; then
         local claude_ver
         claude_ver=$(claude --version 2>/dev/null)
         print_success "Claude Code installed ($claude_ver)"
+    elif command_exists claude; then
+        print_error "Claude Code installed but 'claude --version' failed - open a NEW terminal and try 'claude'"
     else
-        print_success "Claude Code installed"
+        print_error "Claude Code install failed - 'claude' not found on PATH"
     fi
 }
 

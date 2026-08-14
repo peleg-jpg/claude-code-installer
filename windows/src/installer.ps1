@@ -463,9 +463,12 @@ function Update-Npm {
 function Install-ClaudeCode {
     Write-StepHeader 6 "Installing Claude Code..."
 
+    # NOTE: never invoke 'claude' directly from PowerShell here - the claude.ps1
+    # npm shim can crash with a StandardOutputEncoding error in some hosts.
+    # Route through the cmd shim instead.
     $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
     if ($claudeCmd) {
-        $claudeVersion = claude --version 2>$null
+        $claudeVersion = cmd /c "claude --version" 2>$null
         Write-Skip "Claude Code is already installed ($claudeVersion)"
         return
     }
@@ -476,23 +479,31 @@ function Install-ClaudeCode {
     }
 
     try {
-        npm install -g @anthropic-ai/claude-code 2>&1 | Out-Null
+        # npm 12+ blocks postinstall scripts by default. Claude Code's postinstall
+        # downloads its native binary, so it must be allowed or the CLI comes out broken.
+        npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             throw "npm install failed with exit code $LASTEXITCODE"
-        }
-
-        # Verify
-        $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
-        if ($claudeCmd) {
-            $claudeVersion = claude --version 2>$null
-            Write-Success "Claude Code installed ($claudeVersion)"
-        }
-        else {
-            Write-Success "Claude Code installed"
         }
     }
     catch {
         throw "Failed to install Claude Code: $($_.Exception.Message)"
+    }
+
+    # Verify outside the try: a flaky version probe must not fail the whole install
+    $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+    if ($claudeCmd) {
+        $claudeVersion = ""
+        try { $claudeVersion = cmd /c "claude --version" 2>$null } catch {}
+        if ($claudeVersion) {
+            Write-Success "Claude Code installed ($claudeVersion)"
+        }
+        else {
+            Write-Success "Claude Code installed (open a NEW terminal to use 'claude')"
+        }
+    }
+    else {
+        Write-StepError "Claude Code install failed - 'claude' not found on PATH"
     }
 }
 
