@@ -113,6 +113,24 @@ jobs:
           .\windows\src\installer.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Run the README one-liner end to end (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/install.ps1 }))
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: CDN fallback serves the same install.ps1 as the repo
+        shell: pwsh
+        run: |
+          $sha = (Select-String -Path README.md -Pattern 'claude-code-installer@([0-9a-f]{40})').Matches[0].Groups[1].Value
+          $cdn = (irm "https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@$sha/windows/install.ps1") -replace "`r`n", "`n"
+          $local = (Get-Content -Raw windows/install.ps1) -replace "`r`n", "`n"
+          if ($cdn.Trim() -ne $local.Trim()) {
+            Write-Host "::error::CDN-pinned install.ps1 differs from the repo copy"
+            exit 1
+          }
+          Write-Host "CDN copy matches repo copy"
+
   pin-check:
     name: CDN pin freshness
     runs-on: ubuntu-latest
