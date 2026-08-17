@@ -7,7 +7,7 @@
 **התקנה בשורה אחת** (פותחים Terminal):
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@9f99db6703b8b17a74451ca602e67f813656c05e/mac/install.sh)"
 ```
 
 **או, אם אתה מעדיף לקלון את הריפו:**
@@ -51,7 +51,7 @@ bash install.sh --debug
 או בשורה אחת:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)" install.sh --debug
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@9f99db6703b8b17a74451ca602e67f813656c05e/mac/install.sh)" install.sh --debug
 ```
 
 ## הגדרות

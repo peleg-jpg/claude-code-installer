@@ -11,7 +11,7 @@
 פותחים Terminal ומדביקים:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@9f99db6703b8b17a74451ca602e67f813656c05e/mac/install.sh)"
 ```
 
 ### Windows
@@ -19,7 +19,7 @@
 פותחים **PowerShell as Administrator** (קליק ימני -> Run as administrator) ומדביקים:
 
 ```powershell
-iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/install.ps1 }))
+iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@9f99db6703b8b17a74451ca602e67f813656c05e/windows/install.ps1 }))
 ```
 
 ## מה מותקן

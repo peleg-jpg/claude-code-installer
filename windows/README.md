@@ -7,7 +7,7 @@
 **התקנה בשורה אחת** (פותחים PowerShell as Administrator):
 
 ```powershell
-iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/install.ps1 }))
+iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@9f99db6703b8b17a74451ca602e67f813656c05e/windows/install.ps1 }))
 ```
 
 **או, אם אתה מעדיף לקלון את הריפו:**

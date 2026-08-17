@@ -112,3 +112,22 @@ jobs:
         run: |
           .\windows\src\installer.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  pin-check:
+    name: CDN pin freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pinned jsDelivr SHA still matches the launchers
+        run: |
+          sha=$(grep -oE 'claude-code-installer@[0-9a-f]{40}' README.md | head -1 | cut -d@ -f2)
+          echo "Pinned SHA: $sha"
+          if ! git diff --quiet "$sha" HEAD -- mac/install.sh windows/install.ps1; then
+            echo "::error::mac/install.sh or windows/install.ps1 changed but the jsDelivr fallback in the READMEs is still pinned to $sha. Update the @<sha> in README.md, mac/README.md, windows/README.md."
+            exit 1
+          fi
