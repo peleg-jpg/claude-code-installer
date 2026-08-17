@@ -57,6 +57,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Parse install.ps1 bootstrap
+        shell: pwsh
+        run: |
+          $tokens = $null; $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'windows/install.ps1'), [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Host $_.Message }; exit 1 }
+          Write-Host "install.ps1 parses cleanly"
+
       - name: Run installer
         shell: pwsh
         run: |

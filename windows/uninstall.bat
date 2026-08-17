@@ -34,7 +34,7 @@ if "%LOCAL_MODE%"=="false" (
     mkdir "!TEMP_DIR!" 2>nul
 
     :: Try PowerShell download (most reliable in PowerShell environments)
-    powershell -Command "try { Invoke-WebRequest -Uri '!REPO_BASE!/src/uninstaller.ps1' -OutFile '!TEMP_DIR!\uninstaller.ps1' -UseBasicParsing } catch { exit 1 }"
+    powershell -Command "try { Invoke-WebRequest -Uri '!REPO_BASE!/src/uninstaller.ps1' -OutFile '!TEMP_DIR!\uninstaller.ps1' -UseBasicParsing } catch { try { Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/src/uninstaller.ps1' -OutFile '!TEMP_DIR!\uninstaller.ps1' -UseBasicParsing } catch { exit 1 } }"
     if !errorlevel! neq 0 (
         echo ERROR: Failed to download uninstaller from GitHub
         echo Please check your internet connection and try again.

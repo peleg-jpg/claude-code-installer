@@ -11,7 +11,7 @@
 פותחים Terminal ומדביקים:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh | bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)"
 ```
 
 ### Windows
@@ -19,7 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/mai
 פותחים **PowerShell as Administrator** (קליק ימני -> Run as administrator) ומדביקים:
 
 ```powershell
-irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.bat" -OutFile install.bat; .\install.bat
+iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/install.ps1 }))
 ```
 
 ## מה מותקן
@@ -46,6 +46,7 @@ irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/wind
 - **בטוח להריץ שוב** - מזהה מה כבר מותקן ומדלג
 - **בדיקות גרסה חכמות** - לא יתקין מחדש אם הגרסה שלך עדכנית
 - **מתקדם לאט-לאט עם סימני התקדמות** - מספרים, צבעים, וסימוני `[OK]` / `[SKIP]` / `[FAIL]`
+- **עמיד ל-rate limit של GitHub** - כל הורדה נופלת אוטומטית ל-CDN חלופי (jsDelivr, ארכיון, git clone) אם GitHub מחזיר 429
 - **מצב דיבאג** - מעבירים `--debug` (Mac) או `-debug` (Windows) ומקבלים פלט מפורט
 
 ## אחרי ההתקנה
@@ -74,7 +75,7 @@ claude --version
 - **Apple Silicon (M1/M2/M3) וגם Intel** נתמכים שניהם.
 - **Windows:** אם `winget` לא קיים, המתקין נופל אוטומטית להורדה ישירה. חובה להריץ מ-PowerShell מורם (Administrator).
 - **מצב דיבאג:**
-  - Mac: `curl -fsSL ...install.sh | bash -s -- --debug`
+  - Mac: מוסיפים ` install.sh --debug` בסוף שורת ההתקנה (אחרי הגרשיים)
   - Win: `install.bat -debug`
 
 ## הסרה
@@ -82,13 +83,13 @@ claude --version
 ### macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/uninstall.sh | bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/uninstall.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/uninstall.sh)"
 ```
 
 ### Windows
 
 ```powershell
-irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/uninstall.bat" -OutFile uninstall.bat; .\uninstall.bat
+irm https://github.com/peleg-jpg/claude-code-installer/archive/main.zip -OutFile "$env:TEMP\cci.zip"; Expand-Archive "$env:TEMP\cci.zip" "$env:TEMP\cci" -Force; & "$env:TEMP\cci\claude-code-installer-main\windows\uninstall.bat"
 ```
 
 > ב-Mac, ה-Uninstaller לא מסיר את Xcode Command Line Tools בכוונה, כי כלים אחרים במערכת תלויים בהם.
@@ -111,7 +112,8 @@ mac/
     config.json        # גרסאות, תוספים, הגדרות
 
 windows/
-  install.bat          # משגר דק
+  install.ps1          # משגר ה-One Liner (PowerShell)
+  install.bat          # משגר דק (לריפו מקלונן)
   uninstall.bat
   src/
     installer.ps1
@@ -119,7 +121,7 @@ windows/
     config.json
 ```
 
-המשגר בודק אם `src/installer.*` נמצא לידו על הדיסק. אם כן, מריץ מקומית. אם לא (כי המשתמש הריץ `curl ... | bash`), הוא מוריד את `installer.*` ואת `config.json` לתיקייה זמנית ומריץ משם. ככה אותה שורת פקודה עובדת גם אם קלונת את הריפו וגם אם פשוט הדבקת את ה-One Liner.
+המשגר בודק אם `src/installer.*` נמצא לידו על הדיסק. אם כן, מריץ מקומית. אם לא (כי המשתמש הריץ את ה-One Liner), הוא מוריד את `installer.*` ואת `config.json` לתיקייה זמנית ומריץ משם. כל הורדה מנסה כמה מקורות לפי הסדר: raw של GitHub, ה-CDN של jsDelivr, ארכיון הריפו, ו-git clone. ככה גם אם GitHub חוסם את הכתובת שלך עם 429 (rate limit), ההתקנה פשוט ממשיכה ממקור אחר.
 
 ## בדיקות אוטומטיות
 

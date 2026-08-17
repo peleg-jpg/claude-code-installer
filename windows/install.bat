@@ -60,27 +60,35 @@ if "%LOCAL_MODE%"=="false" (
     mkdir "!TEMP_DIR!" 2>nul
     mkdir "!TEMP_DIR!\src" 2>nul
 
+    set "DOWNLOAD_OK=true"
     echo Downloading configuration files...
     call :DownloadFile "!REPO_BASE!/src/config.json" "!TEMP_DIR!\src\config.json"
-    if !errorlevel! neq 0 (
-        echo ERROR: Failed to download config.json from GitHub
-        echo.
-        echo Possible causes:
-        echo - Network connectivity issues
-        echo - Corporate firewall blocking GitHub
-        echo.
-        echo Please try:
-        echo 1. Check internet connection
-        echo 2. Download repository manually from GitHub
-        echo 3. Run from administrator command prompt
-        goto :cleanup
+    if !errorlevel! neq 0 set "DOWNLOAD_OK=false"
+
+    if "!DOWNLOAD_OK!"=="true" (
+        echo Downloading installer script...
+        call :DownloadFile "!REPO_BASE!/src/installer.ps1" "!TEMP_DIR!\src\installer.ps1"
+        if !errorlevel! neq 0 set "DOWNLOAD_OK=false"
     )
 
-    echo Downloading installer script...
-    call :DownloadFile "!REPO_BASE!/src/installer.ps1" "!TEMP_DIR!\src\installer.ps1"
-    if !errorlevel! neq 0 (
-        echo ERROR: Failed to download installer.ps1
-        goto :cleanup
+    rem raw.githubusercontent.com rate-limits unauthenticated IPs (HTTP 429);
+    rem the repo zip on codeload is a separate service, so fall back to it.
+    if "!DOWNLOAD_OK!"=="false" (
+        echo Direct download failed - GitHub may be rate-limiting. Trying repository archive...
+        call :DownloadArchive
+        if !errorlevel! neq 0 (
+            echo ERROR: Failed to download installer files from GitHub
+            echo.
+            echo Possible causes:
+            echo - Network connectivity issues
+            echo - Corporate firewall blocking GitHub
+            echo.
+            echo Please try:
+            echo 1. Check internet connection
+            echo 2. Download repository manually from GitHub
+            echo 3. Run from administrator command prompt
+            goto :cleanup
+        )
     )
 
     echo.
@@ -136,10 +144,21 @@ if "%USE_POWERSHELL%"=="true" (
     exit /b !download_result!
 ) else (
     if "%DEBUG_MODE%"=="true" (
-        curl -L -v -o "!dest!" "!url!" 2>&1
+        curl -f -L -v -o "!dest!" "!url!" 2>&1
     ) else (
-        curl -L -s -o "!dest!" "!url!"
+        curl -f -L -s -o "!dest!" "!url!"
     )
     set "download_result=!errorlevel!"
     exit /b !download_result!
 )
+
+:DownloadArchive
+:: Download the whole repo zip from codeload and copy the needed files
+:: into place. Used when raw.githubusercontent.com is rate-limited.
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/peleg-jpg/claude-code-installer/archive/main.zip' -OutFile '%TEMP_DIR%\repo.zip' -UseBasicParsing; Expand-Archive -LiteralPath '%TEMP_DIR%\repo.zip' -DestinationPath '%TEMP_DIR%\repo' -Force } catch { exit 1 }"
+if %errorlevel% neq 0 exit /b 1
+copy /y "%TEMP_DIR%\repo\claude-code-installer-main\windows\src\config.json" "%TEMP_DIR%\src\config.json" >nul
+if %errorlevel% neq 0 exit /b 1
+copy /y "%TEMP_DIR%\repo\claude-code-installer-main\windows\src\installer.ps1" "%TEMP_DIR%\src\installer.ps1" >nul
+if %errorlevel% neq 0 exit /b 1
+exit /b 0

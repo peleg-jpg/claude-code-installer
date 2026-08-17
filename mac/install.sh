@@ -44,16 +44,35 @@ else
     [[ "$DEBUG_MODE" == "true" ]] && echo "[DEBUG] Temp dir: $TEMP_DIR"
     [[ "$DEBUG_MODE" == "true" ]] && echo "[DEBUG] Downloading from: $REPO_BASE"
 
-    curl -fsSL "$REPO_BASE/src/config.json" -o "$TEMP_DIR/src/config.json" || {
-        echo "ERROR: Failed to download config.json from GitHub"
-        echo "Please check your internet connection and try again."
-        exit 1
+    # raw.githubusercontent.com and codeload both rate-limit unauthenticated
+    # IPs (HTTP 429). jsDelivr is an independent CDN and git clone uses yet
+    # another endpoint, so chain them: raw -> jsDelivr -> archive -> clone.
+    CDN_BASE="https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac"
+
+    fetch_file() { # $1 = path relative to mac/, $2 = destination
+        curl -fsSL "$REPO_BASE/$1" -o "$2" 2>/dev/null \
+            || curl -fsSL "$CDN_BASE/$1" -o "$2" 2>/dev/null
     }
 
-    curl -fsSL "$REPO_BASE/src/installer.sh" -o "$TEMP_DIR/src/installer.sh" || {
-        echo "ERROR: Failed to download installer.sh from GitHub"
-        exit 1
+    download_from_archive() {
+        echo "Direct downloads failed (GitHub may be rate-limiting). Trying repository archive..."
+        curl -fsSL "https://github.com/peleg-jpg/claude-code-installer/archive/main.tar.gz" \
+            | tar -xz -C "$TEMP_DIR" 2>/dev/null \
+            || git clone -q --depth 1 "https://github.com/peleg-jpg/claude-code-installer" \
+                "$TEMP_DIR/claude-code-installer-main" 2>/dev/null \
+            || return 1
+        cp "$TEMP_DIR/claude-code-installer-main/mac/src/config.json" "$TEMP_DIR/src/config.json" \
+            && cp "$TEMP_DIR/claude-code-installer-main/mac/src/installer.sh" "$TEMP_DIR/src/installer.sh"
     }
+
+    if ! { fetch_file "src/config.json" "$TEMP_DIR/src/config.json" \
+        && fetch_file "src/installer.sh" "$TEMP_DIR/src/installer.sh"; }; then
+        download_from_archive || {
+            echo "ERROR: Failed to download installer files from GitHub"
+            echo "Please check your internet connection and try again."
+            exit 1
+        }
+    fi
 
     echo "Files downloaded successfully!"
     echo ""

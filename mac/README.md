@@ -7,7 +7,7 @@
 **התקנה בשורה אחת** (פותחים Terminal):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh | bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)"
 ```
 
 **או, אם אתה מעדיף לקלון את הריפו:**
@@ -51,7 +51,7 @@ bash install.sh --debug
 או בשורה אחת:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh | bash -s -- --debug
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/install.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/install.sh)" install.sh --debug
 ```
 
 ## הגדרות
@@ -78,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/mai
 להסרת כל מה שהותקן:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/uninstall.sh | bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/mac/uninstall.sh || curl -fsSL https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/mac/uninstall.sh)"
 ```
 
 יוסר VS Code, Git (גרסת Homebrew), Node.js (nvm), Homebrew, Bun, GitHub CLI ו-Claude Code, וגם כל ההגדרות שלהם. תתבקש לאשר לפני שזה רץ.

@@ -7,7 +7,7 @@
 **התקנה בשורה אחת** (פותחים PowerShell as Administrator):
 
 ```powershell
-irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.bat" -OutFile install.bat; .\install.bat
+iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/install.ps1 } catch { irm https://cdn.jsdelivr.net/gh/peleg-jpg/claude-code-installer@main/windows/install.ps1 }))
 ```
 
 **או, אם אתה מעדיף לקלון את הריפו:**
@@ -68,7 +68,7 @@ install.bat -debug
 להסרת כל מה שהותקן (פותחים PowerShell as Administrator):
 
 ```powershell
-irm "https://raw.githubusercontent.com/peleg-jpg/claude-code-installer/main/windows/uninstall.bat" -OutFile uninstall.bat; .\uninstall.bat
+irm https://github.com/peleg-jpg/claude-code-installer/archive/main.zip -OutFile "$env:TEMP\cci.zip"; Expand-Archive "$env:TEMP\cci.zip" "$env:TEMP\cci" -Force; & "$env:TEMP\cci\claude-code-installer-main\windows\uninstall.bat"
 ```
 
 יוסר VS Code, Git, Node.js (nvm-windows), Bun, GitHub CLI ו-Claude Code, וגם כל ההגדרות שלהם. תתבקש לאשר לפני שזה רץ.

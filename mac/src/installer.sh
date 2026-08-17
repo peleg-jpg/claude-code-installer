@@ -13,6 +13,28 @@ set -euo pipefail
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Fetch a single file from a GitHub repo to stdout, resilient to the HTTP 429
+# rate limits raw.githubusercontent.com applies per IP.
+# Chain: raw -> jsDelivr CDN -> shallow git clone.
+# Usage: fetch_github_file <owner/repo> <ref> <path-in-repo>
+fetch_github_file() {
+    local repo="$1" ref="$2" path="$3" out tmp cdn_ref="$2"
+    [[ "$cdn_ref" == "HEAD" ]] && cdn_ref="main"
+    out=$(curl -fsSL "https://raw.githubusercontent.com/$repo/$ref/$path" 2>/dev/null) \
+        || out=$(curl -fsSL "https://cdn.jsdelivr.net/gh/$repo@$cdn_ref/$path" 2>/dev/null) \
+        || {
+            tmp=$(mktemp -d)
+            if [[ "$ref" == "HEAD" ]]; then
+                git clone -q --depth 1 "https://github.com/$repo" "$tmp/r" 2>/dev/null || true
+            else
+                git clone -q --depth 1 --branch "$ref" "https://github.com/$repo" "$tmp/r" 2>/dev/null || true
+            fi
+            out=$(cat "$tmp/r/$path" 2>/dev/null) || true
+            rm -rf "$tmp"
+        }
+    [[ -n "$out" ]] && printf '%s\n' "$out"
+}
 CONFIG_FILE="$SCRIPT_DIR/config.json"
 DEBUG_MODE="${DEBUG_MODE:-false}"
 STEP_TOTAL=13
@@ -135,7 +157,11 @@ install_homebrew() {
     # demands passwordless sudo, which most admin users do not have configured.
     # Running interactively lets sudo prompt for the user's password on the TTY.
     local brew_installer
-    brew_installer=$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)
+    brew_installer=$(fetch_github_file Homebrew/install HEAD install.sh) || {
+        print_error "Could not download the Homebrew installer"
+        echo "  Please check your internet connection and try again."
+        exit 1
+    }
     if [[ -t 0 ]]; then
         /bin/bash -c "$brew_installer"
     elif [[ -e /dev/tty ]]; then
@@ -271,7 +297,7 @@ install_nvm() {
         return
     fi
 
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    fetch_github_file nvm-sh/nvm v0.40.1 install.sh | bash || true
 
     # Source nvm for current session
     export NVM_DIR="$HOME/.nvm"
