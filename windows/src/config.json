@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "nodejs": {
-      "minimumVersion": "20.0.0"
+      "minimumVersion": "20.0.0",
+      "fallbackVersion": "22.12.0"
     },
     "git": {
       "minimumVersion": "2.0.0"

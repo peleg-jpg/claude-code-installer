@@ -85,6 +85,7 @@ function Write-StepHeader {
         [int]$StepNumber,
         [string]$Description
     )
+    $script:CurrentStep = "[$StepNumber/10] $Description"
     Write-Host ""
     Write-Host "[$StepNumber/10] $Description" -ForegroundColor Cyan
 }
@@ -102,6 +103,68 @@ function Write-Skip {
 function Write-StepError {
     param([string]$Message)
     Write-Host "  [FAIL] $Message" -ForegroundColor Red
+}
+
+function Get-FileWithRetry {
+    # Downloads a file and survives dropped connections: several attempts with
+    # Invoke-WebRequest, then curl.exe, then BITS, for each URL in order.
+    # A single Invoke-WebRequest used to abort the whole install on one hiccup
+    # ("The request was aborted: The connection was closed unexpectedly").
+    param(
+        [string[]]$Urls,
+        [string]$OutFile,
+        [int]$Attempts = 3,
+        [long]$MinBytes = 1
+    )
+
+    $isComplete = {
+        (Test-Path $OutFile) -and ((Get-Item $OutFile).Length -ge $MinBytes)
+    }
+
+    foreach ($url in $Urls) {
+        for ($i = 1; $i -le $Attempts; $i++) {
+            Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+            try {
+                Write-DebugOutput "Download attempt $i/$Attempts : $url"
+                Invoke-WebRequest -Uri $url -OutFile $OutFile -UseBasicParsing -ErrorAction Stop
+                if (& $isComplete) { return }
+                Write-DebugOutput "Download finished but the file is missing or too small"
+            }
+            catch {
+                Write-DebugOutput "Download attempt $i failed: $($_.Exception.Message)"
+            }
+            if ($i -lt $Attempts) { Start-Sleep -Seconds (2 * $i) }
+        }
+
+        # curl.exe ships with Windows 10 1803+ and uses a different HTTP stack
+        $curl = Join-Path $env:SystemRoot "System32\curl.exe"
+        if (Test-Path $curl) {
+            Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+            try {
+                Write-DebugOutput "Trying curl.exe: $url"
+                & $curl -fsSL --retry 2 --retry-delay 2 --connect-timeout 20 -o $OutFile $url 2>$null
+                if (($LASTEXITCODE -eq 0) -and (& $isComplete)) { return }
+                Write-DebugOutput "curl.exe exit code: $LASTEXITCODE"
+            }
+            catch {
+                Write-DebugOutput "curl.exe failed: $($_.Exception.Message)"
+            }
+        }
+
+        # BITS resumes interrupted transfers
+        Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+        try {
+            Write-DebugOutput "Trying BITS: $url"
+            Start-BitsTransfer -Source $url -Destination $OutFile -ErrorAction Stop
+            if (& $isComplete) { return }
+        }
+        catch {
+            Write-DebugOutput "BITS failed: $($_.Exception.Message)"
+        }
+    }
+
+    Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
+    throw "Download failed after several attempts: $($Urls[0])"
 }
 
 function Test-NodeVersion {
@@ -203,7 +266,7 @@ function Install-VSCode {
         $vscodeUrl = $script:Config.urls.vscodeWindows
         $vscodeInstaller = "$env:TEMP\vscode-installer.exe"
 
-        Invoke-WebRequest -Uri $vscodeUrl -OutFile $vscodeInstaller -UseBasicParsing
+        Get-FileWithRetry -Urls @($vscodeUrl) -OutFile $vscodeInstaller -MinBytes 1MB
 
         $installProcess = Start-Process -FilePath $vscodeInstaller -ArgumentList "/VERYSILENT", "/NORESTART", "/MERGETASKS=!runcode,addtopath" -Wait -PassThru
         if ($installProcess.ExitCode -ne 0) {
@@ -280,7 +343,7 @@ function Install-Git {
             Write-DebugOutput "Could not resolve latest Git release, using fallback URL"
         }
 
-        Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller -UseBasicParsing
+        Get-FileWithRetry -Urls @($gitUrl, "https://github.com/git-for-windows/git/releases/latest/download/Git-64-bit.exe") -OutFile $gitInstaller -MinBytes 1MB
 
         $installProcess = Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT", "/NORESTART" -Wait -PassThru
         if ($installProcess.ExitCode -ne 0) {
@@ -329,34 +392,32 @@ function Set-GitConfig {
     Write-Success "Git configured (default branch: main, editor: VS Code)"
 }
 
-function Install-NodeJS {
-    Write-StepHeader 4 "Installing Node.js..."
+function Test-NodeReady {
+    # Re-reads PATH from the registry and reports whether a new-enough node runs
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = "$machinePath;$userPath"
 
-    # Check if Node.js is already installed and meets minimum version
-    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
-    if ($nodeCmd) {
-        $nodeVersion = node -v 2>$null
-        if (Test-NodeVersion $nodeVersion) {
-            $npmVersion = npm -v 2>$null
-            Write-Skip "Node.js $nodeVersion is already installed (npm v$npmVersion)"
-            return
-        }
-        else {
-            $minVersion = $script:Config.dependencies.nodejs.minimumVersion
-            Write-ColoredOutput "  Node.js $nodeVersion found but v$minVersion+ required. Upgrading..." "Yellow"
+    foreach ($dir in @($env:NVM_SYMLINK, "$env:ProgramFiles\nodejs")) {
+        if ($dir -and (Test-Path (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
+            $env:Path += ";$dir"
         }
     }
 
-    # Install nvm-windows
+    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $nodeCmd) { return $false }
+    return (Test-NodeVersion (node -v 2>$null))
+}
+
+function Install-NodeViaNvm {
     $nvmCmd = Get-Command nvm -ErrorAction SilentlyContinue
-    $nvmExe = $null
 
     if (-not $nvmCmd) {
         Write-DebugOutput "Installing nvm-windows..."
         $nvmUrl = $script:Config.urls.nvmWindows
         $nvmInstaller = "$env:TEMP\nvm-setup.exe"
 
-        Invoke-WebRequest -Uri $nvmUrl -OutFile $nvmInstaller -UseBasicParsing
+        Get-FileWithRetry -Urls @($nvmUrl) -OutFile $nvmInstaller -MinBytes 1MB
 
         # nvm-windows uses InnoSetup - /VERYSILENT is the correct silent flag
         $installProcess = Start-Process -FilePath $nvmInstaller -ArgumentList "/VERYSILENT", "/NORESTART" -Wait -PassThru
@@ -392,7 +453,7 @@ function Install-NodeJS {
         }
 
         Start-Sleep -Seconds 2
-        Write-Success "nvm-windows installed"
+        Write-DebugOutput "nvm-windows installed"
     }
 
     # Find nvm executable
@@ -417,27 +478,98 @@ function Install-NodeJS {
 
     & $nvmExe use lts 2>&1 | ForEach-Object { Write-DebugOutput "nvm: $_" }
     Start-Sleep -Seconds 2
+}
 
-    # Refresh PATH again after nvm install (nvm creates the nodejs symlink)
-    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-    $env:Path = "$machinePath;$userPath"
-
-    # Also ensure the nodejs symlink is in PATH
-    $nodeSymlink = $env:NVM_SYMLINK
-    if (-not $nodeSymlink) { $nodeSymlink = "$env:ProgramFiles\nodejs" }
-    if ((Test-Path $nodeSymlink) -and ($env:Path -notlike "*$nodeSymlink*")) {
-        $env:Path += ";$nodeSymlink"
+function Install-NodeViaWinget {
+    $wingetAvailable = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $wingetAvailable) {
+        Write-DebugOutput "winget not available, skipping"
+        return
     }
 
+    $result = winget install --id OpenJS.NodeJS.LTS -e --source winget --accept-package-agreements --accept-source-agreements --silent 2>&1
+    Write-DebugOutput "winget exit code: $LASTEXITCODE"
+    Write-DebugOutput "winget output: $result"
+}
+
+function Install-NodeViaMsi {
+    # Official installer straight from nodejs.org - no GitHub involved
+    $arch = "x64"
+    if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { $arch = "arm64" }
+
+    $version = $null
+    try {
+        $index = Invoke-RestMethod -Uri "https://nodejs.org/dist/index.json" -UseBasicParsing
+        $version = ($index | Where-Object { $_.lts } | Select-Object -First 1).version
+    }
+    catch {
+        Write-DebugOutput "Could not read the Node.js release index: $($_.Exception.Message)"
+    }
+    if (-not $version) {
+        $version = "v" + $script:Config.dependencies.nodejs.fallbackVersion
+    }
+
+    $msiUrl = "https://nodejs.org/dist/$version/node-$version-$arch.msi"
+    $msiPath = "$env:TEMP\node-lts.msi"
+    Write-DebugOutput "Node.js MSI URL: $msiUrl"
+
+    Get-FileWithRetry -Urls @($msiUrl) -OutFile $msiPath -MinBytes 5MB
+
+    $installProcess = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", "`"$msiPath`"", "/qn", "/norestart" -Wait -PassThru
+    Remove-Item $msiPath -Force -ErrorAction SilentlyContinue
+
+    if (($installProcess.ExitCode -ne 0) -and ($installProcess.ExitCode -ne 3010)) {
+        throw "Node.js MSI installer failed with exit code $($installProcess.ExitCode)"
+    }
+}
+
+function Install-NodeJS {
+    Write-StepHeader 4 "Installing Node.js..."
+
+    # Check if Node.js is already installed and meets minimum version
     $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
     if ($nodeCmd) {
         $nodeVersion = node -v 2>$null
-        Write-Success "Node.js $nodeVersion installed via nvm"
+        if (Test-NodeVersion $nodeVersion) {
+            $npmVersion = npm -v 2>$null
+            Write-Skip "Node.js $nodeVersion is already installed (npm v$npmVersion)"
+            return
+        }
+        else {
+            $minVersion = $script:Config.dependencies.nodejs.minimumVersion
+            Write-ColoredOutput "  Node.js $nodeVersion found but v$minVersion+ required. Upgrading..." "Yellow"
+        }
     }
-    else {
-        Write-Success "Node.js LTS installed via nvm (restart terminal to use)"
+
+    # Three independent routes. One blocked download no longer kills the install.
+    $routes = @(
+        @{ Name = "nvm"; Action = { Install-NodeViaNvm } },
+        @{ Name = "winget"; Action = { Install-NodeViaWinget } },
+        @{ Name = "the nodejs.org installer"; Action = { Install-NodeViaMsi } }
+    )
+
+    for ($r = 0; $r -lt $routes.Count; $r++) {
+        $route = $routes[$r]
+        try {
+            Write-DebugOutput "Trying Node.js install via $($route.Name)..."
+            & $route.Action
+        }
+        catch {
+            Write-DebugOutput "Node.js via $($route.Name) failed: $($_.Exception.Message)"
+        }
+
+        if (Test-NodeReady) {
+            $nodeVersion = node -v 2>$null
+            Write-Success "Node.js $nodeVersion installed via $($route.Name)"
+            return
+        }
+
+        if ($r -lt ($routes.Count - 1)) {
+            Write-ColoredOutput "  Node.js via $($route.Name) did not work, trying another way..." "Yellow"
+        }
     }
+
+    throw "Node.js could not be installed automatically. Install the LTS version from https://nodejs.org and run this installer again."
 }
 
 function Update-Npm {
@@ -613,7 +745,7 @@ function Install-GitHubCLI {
                 throw "Could not find GitHub CLI MSI in latest release"
             }
             $msiPath = "$env:TEMP\gh-cli.msi"
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $msiPath -UseBasicParsing
+            Get-FileWithRetry -Urls @($asset.browser_download_url) -OutFile $msiPath -MinBytes 1MB
 
             $installProcess = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i", "`"$msiPath`"", "/quiet", "/norestart" -Wait -PassThru
             Remove-Item $msiPath -Force -ErrorAction SilentlyContinue
@@ -719,7 +851,7 @@ function Install-ClaudeRTL {
         $vsixUrl = "https://github.com/peleg-jpg/claude-rtl/releases/latest/download/claude-rtl.vsix"
         $vsixPath = "$env:TEMP\claude-rtl.vsix"
         Write-DebugOutput "Downloading Claude RTL from: $vsixUrl"
-        Invoke-WebRequest -Uri $vsixUrl -OutFile $vsixPath -UseBasicParsing
+        Get-FileWithRetry -Urls @($vsixUrl) -OutFile $vsixPath
 
         $output = & $codePath --install-extension $vsixPath --force 2>&1
         $exitCode = $LASTEXITCODE
@@ -801,6 +933,23 @@ function Set-VSCodeSettings {
 
 try {
     Write-DebugOutput "=== Claude Code Installer Started ==="
+
+    # Windows PowerShell 5.1 can default to old TLS, and its progress bar makes
+    # big downloads crawl (slow transfers are the ones that get cut).
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    }
+    catch {}
+    $ProgressPreference = 'SilentlyContinue'
+
+    # Keep .NET error text in English. On Hebrew Windows the localized message
+    # prints as unreadable symbols in the console.
+    try {
+        $english = [System.Globalization.CultureInfo]::GetCultureInfo('en-US')
+        [System.Threading.Thread]::CurrentThread.CurrentUICulture = $english
+        [System.Globalization.CultureInfo]::DefaultThreadCurrentUICulture = $english
+    }
+    catch {}
     Write-DebugOutput "Script path: $($MyInvocation.MyCommand.Path)"
     Write-DebugOutput "Running as admin: $(Test-Administrator)"
 
@@ -917,6 +1066,9 @@ catch {
     Write-ColoredOutput "       Installation Failed              " "Red"
     Write-ColoredOutput "========================================" "Red"
     Write-Host ""
+    if ($script:CurrentStep) {
+        Write-ColoredOutput "Failed at step: $($script:CurrentStep)" "Red"
+    }
     Write-ColoredOutput "Error: $($_.Exception.Message)" "Red"
 
     if ($Debug) {
@@ -926,7 +1078,9 @@ catch {
     }
 
     Write-Host ""
-    Write-ColoredOutput "Please check your internet connection and try again." "Yellow"
+    Write-ColoredOutput "Please check your internet connection and run the installer again." "Yellow"
+    Write-ColoredOutput "Steps that already finished are skipped, so the second run is fast." "Yellow"
+    Write-ColoredOutput "Still stuck on a download? Turn off VPN or web filtering, or use a phone hotspot." "Yellow"
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
     if (-not $env:CI) { $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }

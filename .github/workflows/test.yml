@@ -131,6 +131,76 @@ jobs:
           }
           Write-Host "CDN copy matches repo copy"
 
+  windows-fresh-node:
+    # The main Windows job never reaches the Node.js download, because the
+    # runner ships with Node. This job removes Node first, like a student PC,
+    # and also runs once with the nvm download deliberately dead.
+    name: Windows without Node (nvm download ${{ matrix.nvm }})
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        nvm: [working, broken]
+    env:
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove the preinstalled Node.js
+        shell: powershell
+        run: |
+          $keys = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+          Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'Node.js*' } | ForEach-Object {
+            Write-Host "Uninstalling $($_.DisplayName) $($_.DisplayVersion)"
+            Start-Process msiexec.exe -ArgumentList '/x', $_.PSChildName, '/qn', '/norestart' -Wait
+          }
+          $found = Get-Command node -ErrorAction SilentlyContinue
+          if ($found) {
+            Write-Host "::error::node is still on PATH at $($found.Source)"
+            exit 1
+          }
+          Write-Host "Node.js removed"
+
+      - name: Break the nvm download URL
+        if: matrix.nvm == 'broken'
+        shell: powershell
+        run: |
+          $path = 'windows\src\config.json'
+          $json = Get-Content -Raw $path
+          $dead = $json -replace 'https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe', 'https://127.0.0.1:9/nvm-setup.exe'
+          if ($dead -eq $json) { Write-Host "::error::nvm URL not found in config.json"; exit 1 }
+          Set-Content -Path $path -Value $dead -Encoding ASCII
+
+      - name: Run installer (Windows PowerShell 5.1, like a student)
+        shell: powershell
+        run: |
+          & powershell -NoProfile -ExecutionPolicy Bypass -File windows\src\installer.ps1 -Debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Node.js and Claude Code
+        shell: powershell
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          $missing = @()
+          foreach ($t in @('node', 'npm', 'claude')) {
+            $cmd = Get-Command $t -ErrorAction SilentlyContinue
+            if ($cmd) {
+              $ver = (cmd /c "$t --version" 2>$null | Select-Object -First 1)
+              Write-Host "OK:      $t  ($ver)  $($cmd.Source)"
+            } else {
+              Write-Host "MISSING: $t"
+              $missing += $t
+            }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Host "::error::Missing tools: $($missing -join ', ')"
+            exit 1
+          }
+          $major = [int]((cmd /c "node -v") -replace '^v', '').Split('.')[0]
+          if ($major -lt 20) { Write-Host "::error::Node.js $major is older than 20"; exit 1 }
+
   pin-check:
     name: CDN pin freshness
     runs-on: ubuntu-latest
