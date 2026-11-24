@@ -31,7 +31,7 @@ iex ($(try { irm https://raw.githubusercontent.com/peleg-jpg/claude-code-install
 | **Git**                                 | ניהול גרסאות                                           |
 | **VS Code**                             | עורך הקוד, עם הגדרות שפויות מראש                       |
 | **Claude Code VS Code Extension**       | התוסף הרשמי של Anthropic לאינטגרציה ב-VS Code          |
-| **nvm** / **nvm-windows**               | מנהל גרסאות Node                                       |
+| **nvm** (Mac בלבד)                      | מנהל גרסאות Node                                       |
 | **Node.js (LTS)** + **npm** עדכני       | סביבת JavaScript                                       |
 | **Claude Code**                         | מותקן גלובלית דרך npm                                  |
 | **Bun**                                 | runtime מהיר ל-JS, שימושי בזרימות עבודה עם Claude Code |

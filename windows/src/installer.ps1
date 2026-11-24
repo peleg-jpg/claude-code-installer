@@ -398,86 +398,14 @@ function Test-NodeReady {
     $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
     $env:Path = "$machinePath;$userPath"
 
-    foreach ($dir in @($env:NVM_SYMLINK, "$env:ProgramFiles\nodejs")) {
-        if ($dir -and (Test-Path (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
-            $env:Path += ";$dir"
-        }
+    $nodeDir = "$env:ProgramFiles\nodejs"
+    if ((Test-Path (Join-Path $nodeDir "node.exe")) -and ($env:Path -notlike "*$nodeDir*")) {
+        $env:Path += ";$nodeDir"
     }
 
     $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
     if (-not $nodeCmd) { return $false }
     return (Test-NodeVersion (node -v 2>$null))
-}
-
-function Install-NodeViaNvm {
-    $nvmCmd = Get-Command nvm -ErrorAction SilentlyContinue
-
-    if (-not $nvmCmd) {
-        Write-DebugOutput "Installing nvm-windows..."
-        $nvmUrl = $script:Config.urls.nvmWindows
-        $nvmInstaller = "$env:TEMP\nvm-setup.exe"
-
-        Get-FileWithRetry -Urls @($nvmUrl) -OutFile $nvmInstaller -MinBytes 1MB
-
-        # nvm-windows uses InnoSetup - /VERYSILENT is the correct silent flag
-        $installProcess = Start-Process -FilePath $nvmInstaller -ArgumentList "/VERYSILENT", "/NORESTART" -Wait -PassThru
-        Write-DebugOutput "nvm-windows installer exit code: $($installProcess.ExitCode)"
-
-        Remove-Item $nvmInstaller -Force -ErrorAction SilentlyContinue
-
-        # Refresh PATH from registry so we pick up what the installer set
-        $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-        $env:Path = "$machinePath;$userPath"
-
-        # Also set NVM environment variables from registry
-        $nvmHome = [System.Environment]::GetEnvironmentVariable("NVM_HOME", "Machine")
-        if (-not $nvmHome) { $nvmHome = [System.Environment]::GetEnvironmentVariable("NVM_HOME", "User") }
-        if ($nvmHome) {
-            $env:NVM_HOME = $nvmHome
-            Write-DebugOutput "NVM_HOME set to: $nvmHome"
-        }
-        else {
-            # Fallback to default location
-            $env:NVM_HOME = "$env:APPDATA\nvm"
-            $env:Path += ";$env:APPDATA\nvm"
-        }
-
-        $nvmSymlink = [System.Environment]::GetEnvironmentVariable("NVM_SYMLINK", "Machine")
-        if (-not $nvmSymlink) { $nvmSymlink = [System.Environment]::GetEnvironmentVariable("NVM_SYMLINK", "User") }
-        if ($nvmSymlink) {
-            $env:NVM_SYMLINK = $nvmSymlink
-        }
-        else {
-            $env:NVM_SYMLINK = "$env:ProgramFiles\nodejs"
-        }
-
-        Start-Sleep -Seconds 2
-        Write-DebugOutput "nvm-windows installed"
-    }
-
-    # Find nvm executable
-    $nvmExe = "$env:NVM_HOME\nvm.exe"
-    if (-not (Test-Path $nvmExe)) {
-        $nvmExe = "$env:APPDATA\nvm\nvm.exe"
-    }
-    if (-not (Test-Path $nvmExe)) {
-        $nvmExe = "C:\ProgramData\nvm\nvm.exe"
-    }
-
-    if (-not (Test-Path $nvmExe)) {
-        throw "nvm installation failed - executable not found at any known location"
-    }
-
-    Write-DebugOutput "Using nvm at: $nvmExe"
-
-    # Install Node.js LTS via nvm
-    Write-DebugOutput "Installing Node.js LTS via nvm..."
-    & $nvmExe install lts 2>&1 | ForEach-Object { Write-DebugOutput "nvm: $_" }
-    Start-Sleep -Seconds 3
-
-    & $nvmExe use lts 2>&1 | ForEach-Object { Write-DebugOutput "nvm: $_" }
-    Start-Sleep -Seconds 2
 }
 
 function Install-NodeViaWinget {
@@ -541,12 +469,18 @@ function Install-NodeJS {
         }
     }
 
-    # Three independent routes. One blocked download no longer kills the install.
-    $routes = @(
-        @{ Name = "nvm"; Action = { Install-NodeViaNvm } },
-        @{ Name = "winget"; Action = { Install-NodeViaWinget } },
-        @{ Name = "the nodejs.org installer"; Action = { Install-NodeViaMsi } }
-    )
+    # Independent routes, tried in the order set in config.json. Node.js used to
+    # come through nvm-windows, whose release file was renamed upstream (404),
+    # so every fresh install died here. Both routes below are first-party.
+    $knownRoutes = @{
+        "winget" = @{ Name = "winget"; Action = { Install-NodeViaWinget } }
+        "msi"    = @{ Name = "the nodejs.org installer"; Action = { Install-NodeViaMsi } }
+    }
+    $routes = @()
+    foreach ($key in @($script:Config.dependencies.nodejs.installRoutes)) {
+        if ($knownRoutes.ContainsKey("$key")) { $routes += $knownRoutes["$key"] }
+    }
+    if ($routes.Count -eq 0) { $routes = @($knownRoutes["winget"], $knownRoutes["msi"]) }
 
     for ($r = 0; $r -lt $routes.Count; $r++) {
         $route = $routes[$r]

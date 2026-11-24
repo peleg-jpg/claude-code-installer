@@ -307,6 +307,15 @@ function Uninstall-NodeJS {
         Write-DebugOutput "nvm uninstaller exit code: $($proc.ExitCode)"
     }
 
+    # Node.js installed by winget or the nodejs.org MSI: remove the product itself
+    $uninstallKeys = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    $nodeProducts = Get-ItemProperty $uninstallKeys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'Node.js*' }
+    foreach ($product in $nodeProducts) {
+        Write-DebugOutput "Uninstalling $($product.DisplayName) via msiexec product code: $($product.PSChildName)"
+        $proc = Start-Process -FilePath "msiexec.exe" -ArgumentList "/x", $product.PSChildName, "/qn", "/norestart" -Wait -PassThru
+        Write-DebugOutput "msiexec exit code: $($proc.ExitCode)"
+    }
+
     # Clean up nvm directories
     $nvmDirs = @(
         "$env:APPDATA\nvm",

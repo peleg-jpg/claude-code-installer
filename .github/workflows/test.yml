@@ -132,16 +132,16 @@ jobs:
           Write-Host "CDN copy matches repo copy"
 
   windows-fresh-node:
-    # The main Windows job never reaches the Node.js download, because the
+    # The main Windows job never reaches the Node.js install, because the
     # runner ships with Node. This job removes Node first, like a student PC,
-    # and also runs once with the nvm download deliberately dead.
-    name: Windows without Node (nvm download ${{ matrix.nvm }})
+    # and runs each install route on its own.
+    name: Windows without Node (Node.js via ${{ matrix.route }})
     runs-on: windows-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        nvm: [working, broken]
+        route: [winget, msi]
     env:
       CI: "true"
     steps:
@@ -163,15 +163,14 @@ jobs:
           }
           Write-Host "Node.js removed"
 
-      - name: Break the nvm download URL
-        if: matrix.nvm == 'broken'
+      - name: Allow only the ${{ matrix.route }} route
         shell: powershell
         run: |
           $path = 'windows\src\config.json'
           $json = Get-Content -Raw $path
-          $dead = $json -replace 'https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe', 'https://127.0.0.1:9/nvm-setup.exe'
-          if ($dead -eq $json) { Write-Host "::error::nvm URL not found in config.json"; exit 1 }
-          Set-Content -Path $path -Value $dead -Encoding ASCII
+          $only = $json.Replace('"installRoutes": ["winget", "msi"]', '"installRoutes": ["${{ matrix.route }}"]')
+          if ($only -eq $json) { Write-Host "::error::installRoutes not found in config.json"; exit 1 }
+          Set-Content -Path $path -Value $only -Encoding ASCII
 
       - name: Run installer (Windows PowerShell 5.1, like a student)
         shell: powershell
@@ -200,6 +199,18 @@ jobs:
           }
           $major = [int]((cmd /c "node -v") -replace '^v', '').Split('.')[0]
           if ($major -lt 20) { Write-Host "::error::Node.js $major is older than 20"; exit 1 }
+
+      - name: Every download URL in config.json answers
+        shell: powershell
+        run: |
+          $config = Get-Content -Raw windows\src\config.json | ConvertFrom-Json
+          $bad = @()
+          foreach ($prop in $config.urls.PSObject.Properties) {
+            $code = & "$env:SystemRoot\System32\curl.exe" -sIL -o NUL -w '%{http_code}' $prop.Value
+            Write-Host "$code  $($prop.Name)  $($prop.Value)"
+            if ($code -ne '200') { $bad += $prop.Name }
+          }
+          if ($bad.Count -gt 0) { Write-Host "::error::Dead download URLs: $($bad -join ', ')"; exit 1 }
 
   pin-check:
     name: CDN pin freshness

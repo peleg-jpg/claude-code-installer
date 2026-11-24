@@ -2,14 +2,14 @@
   "dependencies": {
     "nodejs": {
       "minimumVersion": "20.0.0",
-      "fallbackVersion": "22.12.0"
+      "fallbackVersion": "22.12.0",
+      "installRoutes": ["winget", "msi"]
     },
     "git": {
       "minimumVersion": "2.0.0"
     }
   },
   "urls": {
-    "nvmWindows": "https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe",
     "vscodeWindows": "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
   },
   "vscode": {

@@ -23,7 +23,7 @@ install.bat
 1. **VS Code** - מתקין דרך winget (fallback: הורדה ישירה), מוסיף ל-PATH
 2. **Git** - מתקין דרך winget (fallback: הורדה ישירה), מוסיף ל-PATH
 3. **הגדרות Git** - ברנץ דיפולטיבי `main`, VS Code כעורך, credential helper של Windows
-4. **Node.js** - מתקין nvm-windows ואחר כך Node.js LTS דרך nvm
+4. **Node.js** - מתקין Node.js LTS דרך winget, ואם אין winget אז מהמתקין הרשמי של nodejs.org
 5. **npm** - מעדכן לגרסה האחרונה
 6. **Claude Code** - מתקין גלובלית דרך npm
 7. **Bun** - מתקין runtime מהיר נוסף ל-JS
@@ -71,7 +71,7 @@ install.bat -debug
 irm https://github.com/peleg-jpg/claude-code-installer/archive/main.zip -OutFile "$env:TEMP\cci.zip"; Expand-Archive "$env:TEMP\cci.zip" "$env:TEMP\cci" -Force; & "$env:TEMP\cci\claude-code-installer-main\windows\uninstall.bat"
 ```
 
-יוסר VS Code, Git, Node.js (nvm-windows), Bun, GitHub CLI ו-Claude Code, וגם כל ההגדרות שלהם. תתבקש לאשר לפני שזה רץ.
+יוסר VS Code, Git, Node.js, Bun, GitHub CLI ו-Claude Code, וגם כל ההגדרות שלהם. תתבקש לאשר לפני שזה רץ.
 
 ## מבנה תיקיות
 
